@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"wepchat_subscription/api/holder"
 	"wepchat_subscription/api/midware"
 )
 
@@ -14,13 +15,19 @@ type WechatAPI struct {
 	EventHandle   MessageHandler
 	MessageHandle MessageHandler
 	config        *Config
+	Token         *holder.Holder
 }
+
 
 func New(c *Config) *WechatAPI {
 	return &WechatAPI{
 		MessageHandle: defaultMessageHandler,
 		EventHandle:   defaultMessageHandler,
 		config:        c,
+		Token: holder.New(&holder.Config{
+			AppId:     c.AppID,
+			AppSecret: c.AppSecret,
+		}),
 	}
 }
 
