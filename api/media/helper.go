@@ -1,43 +1,23 @@
 package media
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
-	"os"
 )
 
-func newFilePost(fieldname string, filename string, out io.Writer, description ...VideoDescription) (*multipart.Writer, error) {
+func newFileForm(fieldname string, filename string, in io.Reader, out io.Writer) (*multipart.Writer, error) {
 	m := multipart.NewWriter(out)
 	w, err := m.CreateFormFile(fieldname, filename)
 	if err != nil {
 		return nil, err
 	}
-	fw, err := os.Open(filename)
-	if err != nil {
+	_, err = io.Copy(w, in)
+	if err != nil || err != io.EOF {
 		return nil, err
 	}
-	_, err = io.Copy(w, fw)
-	if err != nil {
-		return nil, err
-	}
-	if description != nil {
-		dw, err := m.CreateFormField("description")
-		if err != nil {
-			return nil, err
-		}
-		dwBytes, err := json.Marshal(description[0])
-		if err != nil {
-			return nil, err
-		}
-		_, _ = dw.Write(dwBytes)
-	}
-	//close
-	_ = m.Close()
-	_ = fw.Close()
 	return m, nil
 }
 

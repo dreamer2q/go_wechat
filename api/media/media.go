@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"mime"
 	"net/url"
 	"strings"
@@ -11,11 +13,16 @@ import (
 )
 
 const (
-	reqTmpUpload  = "cgi-bin/media/upload"
-	reqTmpGet     = "cgi-bin/media/get"
-	reqUpload     = "cgi-bin/material/add_material"
-	reqUploadNews = "cgi-bin/material/add_news"
-	reqGet        = "cgi-bin/material/get_material"
+	reqTmpUpload     = "cgi-bin/media/upload"
+	reqTmpGet        = "cgi-bin/media/get"
+	reqUpload        = "cgi-bin/material/add_material"
+	reqUploadNews    = "cgi-bin/material/add_news"
+	reqGet           = "cgi-bin/material/get_material"
+	reqUploadImage   = "cgi-bin/media/uploadimg"
+	reqDelete        = "cgi-bin/material/del_material"
+	reqArticleUpdate = "cgi-bin/material/update_news"
+	reqMediaCount    = "cgi-bin/material/get_materialcount"
+	reqMaterialList  = "cgi-bin/material/batchget_material"
 
 	TypImage = "image"
 	TypVoice = "voice"
@@ -48,7 +55,7 @@ func (m *Media) UploadArticle(article *ArticleWrapper) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UploadArticle post: %v", err)
 	}
-	ret := &Result{}
+	ret := &Result{m: m}
 	err = json.Unmarshal(body, ret)
 	if err != nil {
 		return nil, fmt.Errorf("UploadArticle unmarshal: %v", err)
@@ -60,8 +67,43 @@ func (m *Media) UploadArticle(article *ArticleWrapper) (*Result, error) {
 }
 
 //used to upload pictures in the Article (to satisfy wechat requirement)
-func (m *Media) uploadImageForArticle() {
-
+func (m *Media) uploadImageForArticle(rawUri string) (retUrl string, err error) {
+	var (
+		bodyBytes  []byte
+		bodyBuffer = &bytes.Buffer{}
+	)
+	if strings.HasPrefix(rawUri, "http") {
+		bodyBytes, err = DownFile(rawUri)
+	} else {
+		bodyBytes, err = ioutil.ReadFile(rawUri)
+	}
+	if err != nil {
+		return
+	}
+	fileForm, err := newFileForm("media", rawUri, bytes.NewReader(bodyBytes), bodyBuffer)
+	if err != nil {
+		return
+	}
+	//close before sending any request
+	_ = fileForm.Close()
+	var (
+		body []byte
+	)
+	_, body, err = m.req.Post(reqUploadImage, nil, fileForm.FormDataContentType(), bodyBuffer)
+	if err != nil {
+		return
+	}
+	ret := &Result{}
+	err = json.Unmarshal(body, ret)
+	if err != nil {
+		return
+	}
+	if ret.ErrCode != 0 {
+		err = fmt.Errorf("%d %v", ret.ErrCode, ret.ErrMsg)
+		return
+	}
+	retUrl = ret.Url
+	return
 }
 
 //
@@ -73,32 +115,44 @@ func (m *Media) uploadImageForArticle() {
 //视频（video）：10MB，支持MP4格式
 //缩略图（thumb）：64KB，支持JPG格式
 //
-func (m *Media) UploadMaterial(filename string, typ string, permanent bool, description ...VideoDescription) (*Result, error) {
+func (m *Media) UploadMaterial(name string, in io.Reader, permanent bool, typ string, description ...VideoDescription) (*Result, error) {
 	params := url.Values{}
 	params.Add("type", typ)
 	postBody := &bytes.Buffer{}
-	if typ == TypVideo && description == nil || typ != TypVideo && description != nil {
-		return nil, fmt.Errorf("upload: video type requires description field")
-	}
-	post, err := newFilePost("media", filename, postBody, description...)
+	post, err := newFileForm("media", name, in, postBody)
 	if err != nil {
-		return nil, fmt.Errorf("uploadtmp filepost: %v", err)
+		return nil, fmt.Errorf("newFileForm: %v", err)
 	}
-	reqUrl := reqTmpUpload
+	if typ == TypVideo {
+		if description == nil {
+			return nil, fmt.Errorf("missing description for type Video")
+		}
+		videoWriter, err := post.CreateFormField("description")
+		if err != nil {
+			return nil, fmt.Errorf("create description: %v", err)
+		}
+		//assume no error for Marshal
+		videoJson, _ := json.Marshal(description[0])
+		_, _ = videoWriter.Write(videoJson)
+	}
+	//close before sending any http request
+	_ = post.Close()
+	var body []byte
 	if permanent {
-		reqUrl = reqUpload
+		_, body, err = m.req.Post(reqUpload, params, post.FormDataContentType(), postBody)
+	} else {
+		_, body, err = m.req.Post(reqTmpUpload, params, post.FormDataContentType(), postBody)
 	}
-	_, body, err := m.req.Post(reqUrl, params, post.FormDataContentType(), postBody)
 	if err != nil {
-		return nil, fmt.Errorf("uploadtmp post: %v", err)
+		return nil, fmt.Errorf("post: %v", err)
 	}
-	ret := &Result{}
+	ret := &Result{m: m}
 	err = json.Unmarshal(body, ret)
 	if err != nil {
-		return nil, fmt.Errorf("uploadtmp unmarshal: %v", err)
+		return nil, fmt.Errorf("unmarshal: %v", err)
 	}
 	if ret.ErrCode != 0 {
-		return nil, fmt.Errorf("uploadtmp ret: %d %s", ret.ErrCode, ret.ErrMsg)
+		return nil, fmt.Errorf("response: %d %s", ret.ErrCode, ret.ErrMsg)
 	}
 	return ret, nil
 }
@@ -142,7 +196,7 @@ func (m *Media) GetTmpMaterial(mediaID string) (*Response, error) {
 	attach := resp.Header.Get("Content-disposition")
 	ret := &Response{}
 	ret.ContentType = resp.Header.Get("Content-Type")
-	if attach != "" || ret.ContentType == contentPlain { //body is the file
+	if attach != "" || ret.ContentType != contentPlain { //body is the file
 		_, query, err := mime.ParseMediaType(attach)
 		if err != nil {
 			return nil, fmt.Errorf("getTmp parseMediaType: %v", err)
@@ -160,3 +214,68 @@ func (m *Media) GetTmpMaterial(mediaID string) (*Response, error) {
 	}
 	return ret, nil
 }
+
+//can not delete temporary material
+func (m *Media) Delete(mediaID string) error {
+	postBody := fmt.Sprintf(`{"media":%q}`, mediaID)
+	_, body, err := m.req.Post(reqDelete, nil, request.TypeJSON, strings.NewReader(postBody))
+	if err != nil {
+		return err
+	}
+	ret := &Result{}
+	err = json.Unmarshal(body, ret)
+	if ret.ErrCode != 0 {
+		return fmt.Errorf("%d %s", ret.ErrCode, ret.ErrMsg)
+	}
+	return nil
+}
+
+func (m *Media) UpdateArticle(article *ArticleWrapper) error {
+	jsonBytes, err := json.Marshal(article)
+	if err != nil {
+		return fmt.Errorf("marshal: %v", err)
+	}
+	_, body, err := m.req.Post(reqArticleUpdate, nil, request.TypeJSON, bytes.NewReader(jsonBytes))
+	if err != nil {
+		return fmt.Errorf("post: %v", err)
+	}
+	ret := Result{}
+	err = json.Unmarshal(body, &ret)
+	if ret.ErrCode != 0 {
+		return fmt.Errorf("response: %d %s", ret.ErrCode, ret.ErrMsg)
+	}
+	return nil
+}
+
+func (m *Media) MaterialCounter() (*MaterialCounter, error) {
+	_, body, err := m.req.Get(reqMediaCount, nil)
+	if err != nil {
+		return nil, fmt.Errorf("get: %v", err)
+	}
+	ret := &MaterialCounter{}
+	err = json.Unmarshal(body, ret)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal: %v", err)
+
+	}
+	return ret, nil
+}
+
+func (m *Media) GetMaterialList(typ string, offset int, count int) (*MaterialList, error) {
+	postJson := fmt.Sprintf(`{"type":%q,"offset":%q,"count":%q}`, typ, offset, count)
+	_, body, err := m.req.Post(reqMaterialList, nil, request.TypeJSON, strings.NewReader(postJson))
+	if err != nil {
+		return nil, fmt.Errorf("post: %v", err)
+	}
+	ret := &MaterialList{}
+	err = json.Unmarshal(body, ret)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal: %v", err)
+	}
+	if ret.ErrCode != 0 {
+		return nil, fmt.Errorf("reponse: %d %v", ret.ErrCode, ret.ErrMsg)
+	}
+	return ret, nil
+}
+
+
