@@ -7,27 +7,20 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"wepchat_subscription/api/holder"
-	"wepchat_subscription/api/midware"
+	"wechat/api/midware"
 )
 
 type WechatAPI struct {
 	EventHandle   MessageHandler
 	MessageHandle MessageHandler
 	config        *Config
-	Token         *holder.Holder
 }
-
 
 func New(c *Config) *WechatAPI {
 	return &WechatAPI{
 		MessageHandle: defaultMessageHandler,
 		EventHandle:   defaultMessageHandler,
 		config:        c,
-		Token: holder.New(&holder.Config{
-			AppId:     c.AppID,
-			AppSecret: c.AppSecret,
-		}),
 	}
 }
 
@@ -77,13 +70,14 @@ func (w *WechatAPI) requestHandler(c *gin.Context) {
 	//	return
 	//}
 	//fmt.Printf("xmlReply: %s\n", xmlReply)
+
+	//use this frame provided method, to shorten code
 	c.XML(http.StatusOK, &reply)
 	//c.String(http.StatusOK, "success")
 }
 
+//default handler
 func defaultMessageHandler(m *MessageReceive) MessageReply {
-	if m.Content == "" {
-		return Text{Content: "unsupported message"}
-	}
-	return Text{Content: m.Content}
+	//return  noreply to make sure that wechat server do not think we are dead
+	return NoReply{}
 }

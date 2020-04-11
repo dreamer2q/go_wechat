@@ -3,11 +3,34 @@ package main
 import (
 	"fmt"
 	"log"
-	"wepchat_subscription/api"
-	"wepchat_subscription/config"
+	"time"
+	"wechat/api"
+	"wechat/api/media"
+	"wechat/api/request"
+	"wechat/config"
 )
 
 func main() {
+
+	c := &request.Config{
+		AppID:        config.AppID,
+		AppSecret:    config.AppSecret,
+		AppToken:     config.AppToken,
+		AesEncodeKey: config.AesEncodeKey,
+		Callback:     "wx",
+		Timeout:      10 * time.Second,
+	}
+	r := request.New(c)
+	m := media.New(r)
+	res, err := m.UploadMaterial("assets/123.png", media.TypImage, true)
+	if err != nil {
+		log.Panicln(err)
+	}
+	ret, err := m.GetMaterial(res.MediaID)
+	fmt.Println(ret)
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	wx := api.New(&api.Config{
 		AppID:        config.AppID,
@@ -16,12 +39,6 @@ func main() {
 		AesEncodeKey: config.AesEncodeKey,
 		Callback:     "/wx",
 	})
-
-	err := wx.Token.Refresh()
-	if err != nil {
-		log.Panicln(err)
-	}
-	fmt.Printf("token: %s\n", wx.Token)
 
 	wx.EventHandle = func(m *api.MessageReceive) api.MessageReply {
 		log.Printf("EventHandler: user: %s: %s\n", m.FromUserName, m.Event)
