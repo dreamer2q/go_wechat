@@ -1,10 +1,11 @@
 package config
 
 const (
-	//AppID        = "wx90781c8edb74c878"
+	//below is a test account configures
+	//here is the link to register a test account
+	//https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login
 	AppID     = "wx65ead9e0cc37a0be"
 	AppSecret = "4474d9aeab4732854df5e25f5f00ce77"
-	//AppSecret    = "300deb630e14883a1ceb459c8f5fff70"
 
 	ServeURL     = "http://mjj.dreamer2q.wang/wx"
 	AppToken     = "32f90f42de4a4f09ae9b0a0eb23c7592"
