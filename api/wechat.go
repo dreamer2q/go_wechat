@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"wechat/api/midware"
+	"./midware"
 )
 
 type WechatAPI struct {

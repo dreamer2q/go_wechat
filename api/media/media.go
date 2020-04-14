@@ -9,7 +9,7 @@ import (
 	"mime"
 	"net/url"
 	"strings"
-	"wechat/api/request"
+	"../request"
 )
 
 const (

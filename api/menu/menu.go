@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/parnurzeal/gorequest"
-	"wechat/api/request"
+	"../request"
 )
 
 const (
