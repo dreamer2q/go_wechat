@@ -13,6 +13,12 @@ type Request struct {
 	client *http.Client
 }
 
+//Debug
+func (r *Request)SetToken(tk string) {
+	r.token.Access = tk
+	r.token.ExpireIn = 7200
+}
+
 func New(c *Config) *Request {
 	return &Request{
 		token: &token{

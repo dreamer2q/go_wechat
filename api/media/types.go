@@ -6,7 +6,6 @@ type Base struct {
 }
 
 type Result struct {
-	m *Media
 	Base
 
 	//upload article(news)
@@ -15,13 +14,13 @@ type Result struct {
 	Type      string `json:"type"` //values: image, voice, video, thumb
 	MediaID   string `json:"media_id"`
 	CreatedAt int64  `json:"created_at"`
-}
 
-func (r *Result) Delete() error {
-	if r.MediaID != "" {
-		return r.m.Delete(r.MediaID)
-	}
-	return nil
+	MsgID     int    `json:"msg_id"`
+	MsgStatus string `json:"msg_status"`
+	MsgDataID int    `json:"msg_data_id"`
+
+	SpeedLevel int `json:"speed"`
+	RealSpeed  int `json:"realspeed"`
 }
 
 type Response struct {

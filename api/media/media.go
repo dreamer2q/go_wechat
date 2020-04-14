@@ -1,6 +1,7 @@
 package media
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"mime"
 	"net/url"
 	"strings"
-	"../request"
 )
 
 const (
@@ -55,7 +55,7 @@ func (m *Media) UploadArticle(article *ArticleWrapper) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UploadArticle post: %v", err)
 	}
-	ret := &Result{m: m}
+	ret := &Result{}
 	err = json.Unmarshal(body, ret)
 	if err != nil {
 		return nil, fmt.Errorf("UploadArticle unmarshal: %v", err)
@@ -146,7 +146,7 @@ func (m *Media) UploadMaterial(name string, in io.Reader, permanent bool, typ st
 	if err != nil {
 		return nil, fmt.Errorf("post: %v", err)
 	}
-	ret := &Result{m: m}
+	ret := &Result{}
 	err = json.Unmarshal(body, ret)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal: %v", err)
@@ -262,7 +262,7 @@ func (m *Media) MaterialCounter() (*MaterialCounter, error) {
 }
 
 func (m *Media) GetMaterialList(typ string, offset int, count int) (*MaterialList, error) {
-	postJson := fmt.Sprintf(`{"type":%q,"offset":%q,"count":%q}`, typ, offset, count)
+	postJson := fmt.Sprintf(`{"type":%q,"offset":"%d","count":"%d"}`, typ, offset, count)
 	_, body, err := m.req.Post(reqMaterialList, nil, request.TypeJSON, strings.NewReader(postJson))
 	if err != nil {
 		return nil, fmt.Errorf("post: %v", err)
@@ -277,5 +277,3 @@ func (m *Media) GetMaterialList(typ string, offset int, count int) (*MaterialLis
 	}
 	return ret, nil
 }
-
-

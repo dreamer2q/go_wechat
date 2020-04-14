@@ -1,11 +1,10 @@
 package menu
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/parnurzeal/gorequest"
-	"../request"
 )
 
 const (
@@ -37,7 +36,6 @@ func (m *Menu) Create(menu RootMenu) error {
 	//start debug
 	fmt.Printf("menu json: %s\n", jsonData)
 	//end debug
-	gorequest.New()
 	_, body, err := m.req.Post(ReqCreate, nil, request.TypeJSON, bytes.NewReader(jsonData))
 	if err != nil {
 		return fmt.Errorf("menu create: %v", err)
