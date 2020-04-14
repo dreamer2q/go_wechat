@@ -1,2 +1,6 @@
 # go_wechat
-API Implementation for wechat subscription account by Golang
+API Implementation for wechat subscription account in Golang
+
+# Developing
+
+
