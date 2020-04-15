@@ -1,11 +1,11 @@
 package media
 
 import (
-	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"wechat/api/request"
 )
 
 const (
@@ -48,6 +48,7 @@ type Message struct {
 	IgnoreReprint int `json:"send_ignore_reprint"`
 
 	ClientMsgId string `json:"clientmsgid"`
+
 	//unused field, as a reminder
 	msgType string `json:"msgtype"`
 }
@@ -186,7 +187,7 @@ func (m *Media) GetSendSpeed() (*Result, error) {
 }
 func (m *Media) SetSendSpeed(speedLevel int) error {
 	if speedLevel < 0 || speedLevel > 4 {
-		return fmt.Errorf("out of range(0..4)")
+		return fmt.Errorf("seppdLevel out of range(0..4)")
 	}
 	postJson := fmt.Sprintf(`{"speed":%d}`, speedLevel)
 	_, body, err := m.req.Post(reqSpeedSet, nil, request.TypeJSON, strings.NewReader(postJson))

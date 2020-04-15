@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/xml"
+	"log"
+	"reflect"
 )
 
 type MessageHandler func(m *MessageReceive) MessageReply
@@ -78,10 +80,27 @@ type MessageReply interface {
 }
 
 type messageReply struct {
-	XMLName xml.Name
+	XMLName struct{} `xml:"xml"`
 	messageBase
-	Msg interface{}
+	MsgWrapper messageWrapper
 }
+type messageWrapper struct {
+	Msg Message
+}
+
+func (m messageWrapper) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if article, ok := m.Msg.(Articles); ok {
+		err := e.EncodeElement(len(article.Items), xml.StartElement{Name: xml.Name{Local: "ArticleCount"}})
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+	return e.EncodeElement(m.Msg, xml.StartElement{
+		Name: xml.Name{Local: reflect.TypeOf(m.Msg).Name()},
+	})
+}
+
+var _ xml.Marshaler = &messageWrapper{}
 
 type Text struct {
 	Content string `xml:"Content"`
@@ -105,8 +124,47 @@ func (Image) Type() string {
 	return "image"
 }
 
-type NoReply struct{}
+type Voice struct {
+	MediaID string `xml:"MediaId"`
+}
 
-func (NoReply) Type() string {
-	return "noreply"
+func (Voice) Type() string {
+	return "voice"
+}
+
+type Video struct {
+	MediaID     string `xml:"MediaId"`
+	Title       string `xml:"Title"`
+	Description string `xml:"Description"`
+}
+
+func (Video) Type() string {
+	return "video"
+}
+
+type Music struct {
+	Title       string `xml:"Title"`
+	Description string `xml:"Description"`
+	MusicURL    string `xml:"MusicUrl"`
+	HqURL       string `xml:"HQMusicUrl"`
+	ThumbID     string `xml:"ThumbMediaId"`
+}
+
+func (Music) Type() string {
+	return "music"
+}
+
+type ArticleItem struct {
+	Title       string `xml:"Title"`
+	Description string `xml:"Description"`
+	PicURL      string `xml:"PicUrl"`
+	URL         string `xml:"Url"`
+}
+
+type Articles struct {
+	Items []ArticleItem `xml:"item"`
+}
+
+func (Articles) Type() string {
+	return "news"
 }
