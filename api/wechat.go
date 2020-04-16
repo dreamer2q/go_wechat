@@ -7,19 +7,40 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"wechat/api/media"
+	"wechat/api/menu"
+	"wechat/api/message"
 	"wechat/api/midware"
+	"wechat/api/request"
 )
 
 type WechatAPI struct {
 	EventHandle   MessageHandler
 	MessageHandle MessageHandler
-	config        *Config
+
+	Media    *media.Media
+	Menu     *menu.Menu
+	Template *message.Template
+
+	config *Config
 }
 
 func New(c *Config) *WechatAPI {
+	rc := &request.Config{
+		AppID:        c.AppID,
+		AppSecret:    c.AppSecret,
+		AppToken:     c.AppToken,
+		AesEncodeKey: c.AesEncodeKey,
+		Callback:     c.Callback,
+		Timeout:      c.Timeout,
+	}
+	r := request.New(rc)
 	return &WechatAPI{
 		MessageHandle: defaultMessageHandler,
 		EventHandle:   defaultMessageHandler,
+		Media:         media.New(r),
+		Menu:          menu.New(r),
+		Template:      message.New(r),
 		config:        c,
 	}
 }

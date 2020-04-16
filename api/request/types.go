@@ -41,3 +41,8 @@ func typeMapper(key string) string {
 	}
 	return key
 }
+
+type CommonError struct {
+	ErrCode int    `json:"errcode,omitempty"`
+	ErrMsg  string `json:"errmsg,omitempty"`
+}
