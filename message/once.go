@@ -1,6 +1,6 @@
 package message
 
-import "../request"
+import "github.com/dreamer2q/go_wechat/request"
 
 type Once struct {
 	req *request.Request

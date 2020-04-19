@@ -1,10 +1,10 @@
 package account
 
 import (
-	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/dreamer2q/go_wechat/request"
 	"github.com/pkg/errors"
 	"net/url"
 )

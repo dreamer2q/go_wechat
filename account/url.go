@@ -1,9 +1,9 @@
 package account
 
 import (
-	"../request"
 	"encoding/json"
 	"fmt"
+	"github.com/dreamer2q/go_wechat/request"
 	"github.com/pkg/errors"
 	"strings"
 )

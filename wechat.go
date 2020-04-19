@@ -1,14 +1,14 @@
 package wechat
 
 import (
-	"./media"
-	"./menu"
-	"./message"
-	"./midware"
-	"./request"
-	"./user"
 	"encoding/xml"
 	"fmt"
+	"github.com/dreamer2q/go_wechat/media"
+	"github.com/dreamer2q/go_wechat/menu"
+	"github.com/dreamer2q/go_wechat/message"
+	"github.com/dreamer2q/go_wechat/midware"
+	"github.com/dreamer2q/go_wechat/request"
+	"github.com/dreamer2q/go_wechat/user"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"

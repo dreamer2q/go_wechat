@@ -1,6 +1,6 @@
 package message
 
-import "../request"
+import "github.com/dreamer2q/go_wechat/request"
 
 type TemplateItem struct {
 	TemplateID      string `json:"template_id"`
