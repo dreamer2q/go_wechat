@@ -14,7 +14,7 @@ type Request struct {
 }
 
 //Debug
-func (r *Request)SetToken(tk string) {
+func (r *Request) SetToken(tk string) {
 	r.token.Access = tk
 	r.token.ExpireIn = 7200
 }
@@ -49,7 +49,7 @@ func (r *Request) Post(endpoint string, params url.Values, contentType string, b
 	if err != nil {
 		return
 	}
-	resp, err = r.client.Post(reqUrl, contentType, bodyReader)
+	resp, err = r.client.Post(reqUrl, typeMapper(contentType), bodyReader)
 	if err != nil {
 		return
 	}
