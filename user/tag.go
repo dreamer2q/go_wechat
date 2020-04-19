@@ -47,11 +47,11 @@ func (u *User) GetTags() (*Tags, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "get")
 	}
-	ret := &Tags{}
 	if err = request.CheckCommonError(body); err != nil {
 		return nil, errors.Wrap(err, "comment error")
 	}
-	err = json.Unmarshal(body, err)
+	ret := &Tags{}
+	err = json.Unmarshal(body, ret)
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshal")
 	}
@@ -144,5 +144,3 @@ func (u *User) GetTagsFromUser(OpenID string) (tagList []int, err error) {
 	}
 	return ret.TagList, nil
 }
-
-

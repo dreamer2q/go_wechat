@@ -12,6 +12,7 @@ import (
 	"wechat/message"
 	"wechat/midware"
 	"wechat/request"
+	"wechat/user"
 )
 
 type WechatAPI struct {
@@ -21,6 +22,7 @@ type WechatAPI struct {
 	Media    *media.Media
 	Menu     *menu.Menu
 	Template *message.Template
+	User     *user.User
 
 	config *Config
 }
@@ -38,10 +40,13 @@ func New(c *Config) *WechatAPI {
 	return &WechatAPI{
 		MessageHandle: defaultMessageHandler,
 		EventHandle:   defaultMessageHandler,
-		Media:         media.New(r),
-		Menu:          menu.New(r),
-		Template:      message.New(r),
-		config:        c,
+
+		Media:    media.New(r),
+		Menu:     menu.New(r),
+		Template: message.New(r),
+		User:     user.New(r),
+
+		config: c,
 	}
 }
 

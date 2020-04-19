@@ -2,10 +2,6 @@ package wechat
 
 import "time"
 
-const (
-	BaseURL = "https://api.weixin.qq.com/cgi-bin/"
-)
-
 type Config struct {
 	//basic config
 	AppID     string

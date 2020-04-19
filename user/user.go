@@ -21,8 +21,13 @@ type User struct {
 	req *request.Request
 }
 
+func New(r *request.Request) *User {
+	return &User{
+		req: r,
+	}
+}
+
 type List struct {
-	request.CommonError
 	Total int `json:"total"`
 	Count int `json:"count"`
 	Data  struct {
@@ -40,10 +45,13 @@ func (u *User) GetUsers(nextOpenID ...string) (*List, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "get")
 	}
+	if err = request.CheckCommonError(body); err != nil {
+		return nil, errors.Wrap(err, "common error")
+	}
 	ret := &List{}
 	err = json.Unmarshal(body, ret)
-	if ret.ErrCode != 0 {
-		return nil, errors.New(fmt.Sprintf("%d %v", ret.ErrCode, ret.ErrMsg))
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshal")
 	}
 	return ret, nil
 }
@@ -99,5 +107,3 @@ func (u *User) GetUsersInfo(list *GetInfo) ([]Info, error) {
 	}
 	return ret.UserList, nil
 }
-
-
