@@ -23,8 +23,8 @@ const (
 )
 
 type GetComment struct {
-	MsgID string      `json:"msg_data_id"`
-	Index uint32      `json:"index"`
+	MsgID uint32      `json:"msg_data_id"`
+	Index uint32      `json:"index,omitempty"`
 	Begin uint32      `json:"begin"`
 	Count uint32      `json:"count"`
 	Type  CommentType `json:"type"`
