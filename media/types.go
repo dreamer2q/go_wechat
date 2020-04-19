@@ -35,7 +35,7 @@ type Response struct {
 	ContentType string
 
 	//News type of material
-	News []NewsItem `json:"news_item"`
+	News []ArticleItem `json:"news_item"`
 
 	//other types of material including image,voice,thumb
 	Filename string `json:"-"`
@@ -47,7 +47,7 @@ type VideoDescription struct {
 	Intro string `json:"introduction"`
 }
 
-type NewsItem struct {
+type ArticleItem struct {
 	Title        string `json:"title"`
 	ThumbMediaID string `json:"thumb_media_id"` //图文消息的封面图片素材id（必须是永久mediaID）
 	ShowCoverPic int    `json:"show_cover_pic"` //是否显示封面，0为false，即不显示，1为true，即显示
@@ -63,12 +63,12 @@ type NewsItem struct {
 }
 
 type ArticleWrapper struct {
-	Articles []NewsItem `json:"articles"`
+	Articles []ArticleItem `json:"articles"`
 }
 type ArticleUpdateWrapper struct {
-	MediaID string   `json:"media_id"`
-	Index   int      `json:"index"`
-	Article NewsItem `json:"articles"`
+	MediaID string      `json:"media_id"`
+	Index   int         `json:"index"`
+	Article ArticleItem `json:"articles"`
 }
 
 type MaterialCounter struct {
@@ -90,7 +90,7 @@ type MaterialList struct {
 
 		//Article
 		Content struct {
-			Articles []NewsItem `json:"news_item"`
+			Articles []ArticleItem `json:"news_item"`
 		} `json:"content"`
 
 		//Image, Voice, Video

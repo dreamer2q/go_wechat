@@ -67,7 +67,7 @@ func (m *Media) UploadArticle(article *ArticleWrapper) (*Result, error) {
 }
 
 //used to upload pictures in the Article (to satisfy wechat requirement)
-func (m *Media) uploadImageForArticle(rawUri string) (retUrl string, err error) {
+func (m *Media) UploadImageForArticle(rawUri string) (retUrl string, err error) {
 	var (
 		bodyBytes  []byte
 		bodyBuffer = &bytes.Buffer{}
@@ -115,6 +115,11 @@ func (m *Media) uploadImageForArticle(rawUri string) (retUrl string, err error) 
 //视频（video）：10MB，支持MP4格式
 //缩略图（thumb）：64KB，支持JPG格式
 //
+// @name  文件名，需要带后缀
+// @in   io.Reader 接口，读取需要上传的数据
+// @permanent 是否上传永久文件？ true 是， false临时文件
+// @typ 媒体文件类型，分别有图片（image）、语音（voice）、视频（video）和缩略图（thumb）：w
+// @description 上传视频使用
 func (m *Media) UploadMaterial(name string, in io.Reader, permanent bool, typ string, description ...VideoDescription) (*Result, error) {
 	params := url.Values{}
 	params.Add("type", typ)
@@ -261,6 +266,10 @@ func (m *Media) MaterialCounter() (*MaterialCounter, error) {
 	return ret, nil
 }
 
+// @typ		素材的类型，图片（image）、视频（video）、语音 （voice）、图文（news）
+// @offset	从全部素材的该偏移位置开始返回，0表示从第一个素材 返回
+// @count	返回素材的数量，取值在1到20之间
+// 注意，这里面不支持 thumb 类型的资源，感觉是wx的坑
 func (m *Media) GetMaterialList(typ string, offset int, count int) (*MaterialList, error) {
 	postJson := fmt.Sprintf(`{"type":%q,"offset":"%d","count":"%d"}`, typ, offset, count)
 	_, body, err := m.req.Post(reqMaterialList, nil, request.TypeJSON, strings.NewReader(postJson))

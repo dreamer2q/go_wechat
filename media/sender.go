@@ -41,16 +41,15 @@ func (t *ToUser) Add(OpenID ...string) {
 }
 
 type Message struct {
-	ToWxName      string     `json:"towxname,omitempty"`
-	ToUser        *ToUser    `json:"touser,omitempty"`
-	Filter        *MsgFilter `json:"filter,omitempty"`
-	MsgWrapper    MsgWrapper
-	IgnoreReprint int `json:"send_ignore_reprint"`
+	ToWxName      string     `json:"towxname,omitempty"` //available only in preview
+	ToUser        *ToUser    `json:"touser,omitempty"`   //send by openIDs, minimum number is 2 and maximum number is 10000
+	Filter        *MsgFilter `json:"filter,omitempty"`   //send by tag, is_to_all must be false
+	MsgWrapper    MsgWrapper //MpNews(article), MpText, MpVoice, MpImage, MpVideo (video should be specially handled), MpCard
+	IgnoreReprint int        `json:"send_ignore_reprint"` //图文消息被判定为转载时，是否继续群发。 1为继续群发（转载），0为停止群发。 该参数默认为0。
 
-	ClientMsgId string `json:"clientmsgid"`
+	ClientMsgId string `json:"clientmsgid"` //使用 clientmsgid 参数，避免重复推送
 
-	//unused field, as a reminder
-	msgType string `json:"msgtype"`
+	msgType string `json:"msgtype"` //unused
 }
 
 type MsgFilter struct {

@@ -9,7 +9,7 @@ import (
 	"wechat/request"
 )
 
-//TODO comment related APIs
+//TODO test comment related apis
 
 const (
 	reqCommentOpen        = "cgi-bin/comment/open"
@@ -127,7 +127,7 @@ func (m *Media) doCommentSwitch(open bool, mediaID string, index ...int) error {
 	return request.CheckCommonError(body)
 }
 
-func (m *Media) CommentDe(isReply bool, MsgID uint32, CommentID uint32, index ...uint32) error {
+func (m *Media) CommentDel(isReply bool, MsgID uint32, CommentID uint32, index ...uint32) error {
 	var (
 		postJson string
 		body     []byte
