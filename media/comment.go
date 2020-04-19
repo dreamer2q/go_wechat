@@ -1,12 +1,12 @@
 package media
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"strings"
-	"wechat/request"
 )
 
 //TODO test comment related apis

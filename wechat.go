@@ -1,21 +1,21 @@
 package wechat
 
 import (
+	"./media"
+	"./menu"
+	"./message"
+	"./midware"
+	"./request"
+	"./user"
 	"encoding/xml"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"time"
-	"wechat/media"
-	"wechat/menu"
-	"wechat/message"
-	"wechat/midware"
-	"wechat/request"
-	"wechat/user"
 )
 
-type WechatAPI struct {
+type API struct {
 	EventHandle   MessageHandler
 	MessageHandle MessageHandler
 
@@ -27,7 +27,7 @@ type WechatAPI struct {
 	config *Config
 }
 
-func New(c *Config) *WechatAPI {
+func New(c *Config) *API {
 	rc := &request.Config{
 		AppID:        c.AppID,
 		AppSecret:    c.AppSecret,
@@ -37,7 +37,7 @@ func New(c *Config) *WechatAPI {
 		Timeout:      c.Timeout,
 	}
 	r := request.New(rc)
-	return &WechatAPI{
+	return &API{
 		MessageHandle: defaultMessageHandler,
 		EventHandle:   defaultMessageHandler,
 
@@ -50,7 +50,7 @@ func New(c *Config) *WechatAPI {
 	}
 }
 
-func (w *WechatAPI) Run(addr ...string) error {
+func (w *API) Run(addr ...string) error {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -61,7 +61,7 @@ func (w *WechatAPI) Run(addr ...string) error {
 	return r.Run(addr...)
 }
 
-func (w *WechatAPI) requestHandler(c *gin.Context) {
+func (w *API) requestHandler(c *gin.Context) {
 	raw := &MessageReceive{}
 	if err := c.ShouldBindXML(raw); err != nil {
 		log.Printf("requestHandler: %v\n", err)

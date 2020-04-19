@@ -1,6 +1,6 @@
 package message
 
-import "wechat/request"
+import "../request"
 
 type Once struct {
 	req *request.Request

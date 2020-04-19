@@ -1,11 +1,11 @@
 package media
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
-	"wechat/request"
 )
 
 const (

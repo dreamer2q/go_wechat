@@ -1,12 +1,12 @@
 package account
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"net/url"
-	"wechat/request"
 )
 
 const (

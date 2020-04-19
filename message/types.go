@@ -1,6 +1,6 @@
 package message
 
-import "wechat/request"
+import "../request"
 
 type TemplateItem struct {
 	TemplateID      string `json:"template_id"`

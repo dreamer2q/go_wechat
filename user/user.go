@@ -1,13 +1,13 @@
 package user
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"net/url"
 	"strings"
-	"wechat/request"
 )
 
 const (

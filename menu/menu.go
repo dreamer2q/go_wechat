@@ -1,10 +1,10 @@
 package menu
 
 import (
+	"../request"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"wechat/request"
 )
 
 const (
