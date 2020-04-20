@@ -79,7 +79,7 @@ type MessageReply interface {
 	Type() string
 }
 
-type messageReply struct {
+type xmlMsgReply struct {
 	XMLName struct{} `xml:"xml"`
 	messageBase
 	MsgWrapper messageWrapper
