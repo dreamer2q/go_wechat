@@ -34,22 +34,19 @@ func (e *Ev) trigger(msg *MessageReceive) []Handler {
 	if msg.IsEvent() {
 		if msg.Event != "" {
 			if msg.EventKey != "" {
-				if es := e.get(
-					fmt.Sprintf("%s.%s.%s", msg.MsgType, msg.Event, msg.EventKey),
-				); es != nil {
+				if es := e.get(fmt.Sprintf("%s.%s.%s", msg.MsgType, msg.Event, msg.EventKey)); es != nil {
 					ret = append(ret, es...)
 				}
 			}
-			if es := e.get(
-				fmt.Sprintf("%s.%s", msg.MsgType, msg.Event),
-			); es != nil {
+			if es := e.get(fmt.Sprintf("%s.%s", msg.MsgType, msg.Event)); es != nil {
 				ret = append(ret, es...)
 			}
 		}
+		if es := e.get(eventPrefix); es != nil {
+			ret = append(ret, es...)
+		}
 	} else {
-		if es := e.get(
-			fmt.Sprintf("%s.%s", messagePrefix, msg.MsgType),
-		); es != nil {
+		if es := e.get(fmt.Sprintf("%s.%s", messagePrefix, msg.MsgType)); es != nil {
 			ret = append(ret, es...)
 		}
 		if es := e.get(messagePrefix); es != nil {

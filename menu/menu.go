@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/dreamer2q/go_wechat"
 	"github.com/dreamer2q/go_wechat/request"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 const (
@@ -21,13 +21,11 @@ const (
 
 type Menu struct {
 	req *request.Request
-	ev  *wechat.Ev
 }
 
-func New(r *request.Request, ev *wechat.Ev) *Menu {
+func New(r *request.Request) *Menu {
 	return &Menu{
 		req: r,
-		ev:  ev,
 	}
 }
 
@@ -49,7 +47,7 @@ func New(r *request.Request, ev *wechat.Ev) *Menu {
 //view_limited：跳转图文消息URL用户点击view_limited类型按钮后，微信客户端将打开开发者在按钮中填写的永久素材id对应的图文消息URL，永久素材类型只支持图文消息。请注意：永久素材id必须是在“素材管理/新增永久素材”接口上传后获得的合法id。​
 //
 func (m *Menu) Create(menu RootMenu) error {
-	menu.Type(m.ev) //init type data for json marshal
+	menu.Type() //init type data for json marshal
 	jsonData, err := json.Marshal(&menu)
 	if err != nil {
 		return errors.Wrap(err, "marshal")
@@ -103,7 +101,6 @@ func (m *Menu) Delete() error {
 //
 //个性化菜单匹配规则说明：
 //个性化菜单的更新是会被覆盖的。 例如公众号先后发布了默认菜单，个性化菜单1，个性化菜单2，个性化菜单3。那么当用户进入公众号页面时，将从个性化菜单3开始匹配，如果个性化菜单3匹配成功，则直接返回个性化菜单3，否则继续尝试匹配个性化菜单2，直到成功匹配到一个菜单。 根据上述匹配规则，为了避免菜单生效时间的混淆，决定不予提供个性化菜单编辑API，开发者需要更新菜单时，需将完整配置重新发布一轮。
-
 func (m *Menu) CreateCustom(menu RootMenu) (menuId string, err error) {
 	menu.Type()
 	var (
@@ -130,21 +127,23 @@ func (m *Menu) CreateCustom(menu RootMenu) (menuId string, err error) {
 	}
 	return ret.ID, nil
 }
+
 func (m *Menu) CustomInfo() (*CustomInfo, error) {
 	_, body, err := m.req.Get(ReqCustomGet, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "get")
 	}
 	if err = request.CheckCommonError(body); err != nil {
-		return nil, errors.New(err, "common error")
+		return nil, errors.Wrap(err, "common error")
 	}
 	ret := &CustomInfo{}
 	err = json.Unmarshal(body, ret)
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshal")
 	}
-	return ret
+	return ret, nil
 }
+
 func (m *Menu) DelCustom(menuId string) error {
 	postJson := fmt.Sprintf(`{"menuid": %q }`, menuId)
 	_, body, err := m.req.Post(ReqCustomDelete, nil, request.TypeJSON, strings.NewReader(postJson))
@@ -161,7 +160,7 @@ func (m *Menu) CustomTryMatch(userID string) (*MatchInfo, error) {
 		return nil, errors.Wrap(err, "post")
 	}
 	if err = request.CheckCommonError(body); err != nil {
-		return errors.Wrap(err, "common error")
+		return nil, errors.Wrap(err, "common error")
 	}
 	ret := &MatchInfo{}
 	err = json.Unmarshal(body, ret)

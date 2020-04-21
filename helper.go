@@ -15,3 +15,4 @@ func (e *ErrorWrapper) Run() error {
 	}
 	return nil
 }
+
