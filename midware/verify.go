@@ -19,7 +19,7 @@ type requestVerify struct {
 	Nonce     string `form:"nonce"`
 }
 
-func Verify(token string) gin.HandlerFunc {
+func Verifier(token string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		rv := requestVerify{}
 		err := context.MustBindWith(&rv, binding.Query)

@@ -16,4 +16,10 @@ type Config struct {
 
 	//request timeout
 	Timeout time.Duration
+
+	debug bool
+}
+
+func (c *Config) SetDebug(d bool) {
+	c.debug = d
 }

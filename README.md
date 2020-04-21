@@ -47,8 +47,8 @@ func main() {
 			log.Printf("unsubscribe event")
 		}
 		//nil means no reply
-		return nil
-	}
+        return nil
+    }
 
     //设置消息处理函数，空为不处理
 	wx.MessageHandle = func(m *wc.MessageReceive) wc.MessageReply {
@@ -64,7 +64,6 @@ func main() {
 }
 
 ```
-
 ## 菜单处理
 
 > 下面的格式和可能会大改
@@ -102,7 +101,7 @@ err := wx.Menu.Create(
 	}
 ```
 
-菜单事件的消息处理
+# 菜单事件的消息处理
 
 ```go
 wx.EventHandle = func(m *wc.MessageReceive) wc.MessageReply {
