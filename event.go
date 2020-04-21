@@ -16,7 +16,6 @@ type Ev struct {
 	subscribers map[string][]Handler
 }
 
-
 func newEv() *Ev {
 	return &Ev{
 		subscribers: make(map[string][]Handler, 0),

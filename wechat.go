@@ -27,7 +27,7 @@ type API struct {
 	User     *user.User
 	Account  *account.Account
 
-	*ev
+	*Ev
 
 	config *Config
 }
@@ -42,15 +42,16 @@ func New(c *Config) *API {
 		Timeout:      c.Timeout,
 	}
 	r := request.New(rc)
+	ev := newEv()
 	return &API{
 		Media:    media.New(r),
-		Menu:     menu.New(r),
 		Template: message.New(r),
 		User:     user.New(r),
-		Account: account.New(r),
+		Account:  account.New(r),
+		Menu:     menu.New(r, ev),
 
 		//event emmiter
-		ev:newEv(),
+		Ev: ev,
 
 		config: c,
 	}
@@ -60,9 +61,9 @@ func (w *API) Run(addr ...string) error {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(midware.Logger())
-	r.Use(midware.Verify(w.config.AppToken))
+	r.Use(midware.Verifier(w.config.AppToken))
 
-	r.POST(w.config.Callback,w.requestHandler)
+	r.POST(w.config.Callback, w.requestHandler)
 
 	//r.Any(w.config.Callback, w.requestHandler)
 	return r.Run(addr...)
@@ -93,15 +94,17 @@ func (w *API) requestHandler(c *gin.Context) {
 			}
 			//debug only
 			if w.config.debug {
-			xmlReply, err := xml.Marshal(&reply)
-			if err != nil {
-				c.AbortWithStatus(http.StatusInternalServerError)
-				return
+				xmlReply, err := xml.Marshal(&reply)
+				if err != nil {
+					c.AbortWithStatus(http.StatusInternalServerError)
+					return
+				}
+				fmt.Printf("xmlReply: %s\n", xmlReply)
 			}
-			fmt.Printf("xmlReply: %s\n", xmlReply)
 		}
 	)
-	for _,h := range handlers {
+	handlers := w.trigger(raw)
+	for _, h := range handlers {
 		r = h(*raw)
 		if r != nil && !sent {
 			doSend()
@@ -113,15 +116,15 @@ func (w *API) requestHandler(c *gin.Context) {
 }
 
 func (w *API) SetMessageHandler(handler Handler) Unsubscribe {
-	w.On(messagePrefix,handler)
+	w.On(messagePrefix, handler)
 	return func() {
-		w.Off(messagePrefix,handler)
+		w.Off(messagePrefix, handler)
 	}
 }
 
 func (w *API) SetEventHandler(handler Handler) Unsubscribe {
-	w.On(eventPrefix,handler)
+	w.On(eventPrefix, handler)
 	return func() {
-		w.Off(eventPrefix,handler)
+		w.Off(eventPrefix, handler)
 	}
 }
