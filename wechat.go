@@ -56,8 +56,9 @@ func (w *API) Run(addr ...string) error {
 	r.Use(gin.Recovery())
 
 	r.Any(w.config.Callback,
-		w.logger(),
 		w.verifier(),
+		w.encryptor(),
+		w.logger(),
 		w.debugger(),
 		w.requestHandler)
 

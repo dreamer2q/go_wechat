@@ -2,7 +2,6 @@ package wechat
 
 import (
 	"encoding/xml"
-	"log"
 	"reflect"
 )
 
@@ -28,7 +27,7 @@ func (m messageBase) IsEvent() bool {
 
 type MessageReceive struct {
 	//I do not know what are these for, just leave it untouched
-	XMLName xml.Name `xml:"xml"`
+	XMLName struct{} `xml:"xml"`
 	Text    string   `xml:",chardata"`
 
 	//comment struct elements
@@ -92,7 +91,7 @@ func (m messageWrapper) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	if article, ok := m.Msg.(Articles); ok {
 		err := e.EncodeElement(len(article.Items), xml.StartElement{Name: xml.Name{Local: "ArticleCount"}})
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 	}
 	return e.EncodeElement(m.Msg, xml.StartElement{
