@@ -27,7 +27,7 @@ type API struct {
 	User     *user.User
 	Account  *account.Account
 
-	*Ev
+	*ev
 
 	config *Config
 }
@@ -47,10 +47,10 @@ func New(c *Config) *API {
 		Menu:     menu.New(r),
 		Template: message.New(r),
 		User:     user.New(r),
-		Account:  account.New(r),
+		Account: account.New(r),
 
 		//event emmiter
-		Ev: newEv(),
+		ev:newEv(),
 
 		config: c,
 	}
@@ -62,7 +62,7 @@ func (w *API) Run(addr ...string) error {
 	r.Use(midware.Logger())
 	r.Use(midware.Verify(w.config.AppToken))
 
-	r.POST(w.config.Callback, w.requestHandler)
+	r.POST(w.config.Callback,w.requestHandler)
 
 	//r.Any(w.config.Callback, w.requestHandler)
 	return r.Run(addr...)
@@ -91,23 +91,17 @@ func (w *API) requestHandler(c *gin.Context) {
 					Msg: r,
 				},
 			}
-
 			//debug only
 			if w.config.debug {
-				xmlReply, err := xml.Marshal(&reply)
-				if err != nil {
-					c.AbortWithStatus(http.StatusInternalServerError)
-					return
-				}
-				fmt.Printf("xmlReply: %s\n", xmlReply)
+			xmlReply, err := xml.Marshal(&reply)
+			if err != nil {
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
 			}
-
-			//use this framework provided method, to shorten code
-			c.XML(http.StatusOK, &reply)
+			fmt.Printf("xmlReply: %s\n", xmlReply)
 		}
 	)
-	handlers := w.trigger(raw)
-	for _, h := range handlers {
+	for _,h := range handlers {
 		r = h(*raw)
 		if r != nil && !sent {
 			doSend()
@@ -119,15 +113,15 @@ func (w *API) requestHandler(c *gin.Context) {
 }
 
 func (w *API) SetMessageHandler(handler Handler) Unsubscribe {
-	w.On(messagePrefix, handler)
+	w.On(messagePrefix,handler)
 	return func() {
-		w.Off(messagePrefix, handler)
+		w.Off(messagePrefix,handler)
 	}
 }
 
 func (w *API) SetEventHandler(handler Handler) Unsubscribe {
-	w.On(eventPrefix, handler)
+	w.On(eventPrefix,handler)
 	return func() {
-		w.Off(eventPrefix, handler)
+		w.Off(eventPrefix,handler)
 	}
 }
