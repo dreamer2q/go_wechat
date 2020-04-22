@@ -56,11 +56,12 @@ func (w *API) Run(addr ...string) error {
 	r.Use(gin.Recovery())
 
 	r.Any(w.config.Callback,
-		w.verifier(),
-		w.encryptor(),
-		w.logger(),
-		w.debugger(),
-		w.requestHandler)
+		w.logger(),       //logger 需要记录完整的事件，需要处于第一个
+		w.verifier(),     //微信请求认证
+		w.debugger(),     //输出请求和发送的body
+		w.encryptor(),    //消息加密的透明代理
+		w.requestHandler, //消息处理
+	)
 
 	//r.Any(w.config.Callback, w.requestHandler)
 	return r.Run(addr...)

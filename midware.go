@@ -2,15 +2,13 @@ package wechat
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"encoding/xml"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sort"
 	"strings"
 )
 
@@ -22,35 +20,24 @@ type requestVerify struct {
 }
 
 func (w *API) verifier() gin.HandlerFunc {
-	token := w.config.AppToken
-	return func(context *gin.Context) {
+	return func(c *gin.Context) {
 		rv := requestVerify{}
-		err := context.MustBindWith(&rv, binding.Query)
-		if err != nil {
-			log.Printf("verify: %v\n", err)
-			context.AbortWithStatus(http.StatusBadRequest)
+		if err := c.ShouldBindQuery(&rv); err != nil {
+			log.Printf("verifier: %v\n", err)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 
-		strArr := make([]string, 0)
-		strArr = append(strArr, token)
-		strArr = append(strArr, rv.Timestamp)
-		strArr = append(strArr, rv.Nonce)
-		sort.Strings(strArr)
-		unsigned := strings.Join(strArr, "")
-		s := sha1.New()
-		s.Write([]byte(unsigned))
-		signed := fmt.Sprintf("%x", s.Sum(nil))
-
-		if rv.Signature != signed {
-			context.AbortWithStatus(http.StatusBadRequest)
-			log.Printf("verifier: request payload error")
+		sigGen := signature(w.config.AppToken, rv.Timestamp, rv.Nonce)
+		if rv.Signature != sigGen {
+			c.AbortWithStatus(http.StatusBadRequest)
+			log.Printf("verifier: check failed")
 			return
 		}
 
-		if context.Request.Method == "GET" {
-			context.String(http.StatusOK, "%s", rv.EchoStr)
-			context.Abort()
+		if c.Request.Method == "GET" {
+			c.String(http.StatusOK, "%s", rv.EchoStr)
+			c.Abort()
 			log.Printf("verifier: request verified")
 			return
 		}
@@ -81,6 +68,7 @@ func (w *API) logger() gin.HandlerFunc {
 	})
 }
 
+//额外拷贝一份输出流,实现logger的记录
 type bodyLoggerWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
@@ -112,12 +100,14 @@ func (w *API) debugger() gin.HandlerFunc {
 	}
 }
 
-//encryptedXMLMsg 安全模式下的消息体
-type encryptedXMLMsg struct {
+//encryptedXmlRecv 安全模式下的消息体 接受方面
+type encryptedXmlRecv struct {
 	XMLName      struct{} `xml:"xml" json:"-"`
 	ToUserName   string   `xml:"ToUserName" json:"ToUserName"`
 	EncryptedMsg string   `xml:"Encrypt"    json:"Encrypt"`
 }
+
+//劫持发送的消息到Buffer里面
 type encryptorWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
@@ -127,44 +117,55 @@ func (e *encryptorWriter) Write(p []byte) (int, error) {
 	return e.body.Write(p)
 }
 
+//encryptedXmlReply 安全模式下的发送消息结构体
 type encryptedXmlReply struct {
-	XMLName    struct{} `xml:"xml" json:"-"`
-	EncryptMsg string   `xml:"Encrypt"`
-	TimeStamp  string   `xml:"TimeStamp"`
-	Nonce      string   `xml:"Nonce"`
+	XMLName      struct{} `xml:"xml" json:"-"`
+	EncryptMsg   string   `xml:"Encrypt"`
+	MsgSignature string   `xml:"MsgSignature"`
+	TimeStamp    string   `xml:"TimeStamp"`
+	Nonce        string   `xml:"Nonce"`
 }
 
+type requestEncrypt struct {
+	requestVerify
+	EncryptedType string `form:"encrypt_type"`
+	MsgSignature  string `form:"msg_signature"`
+}
+
+//处理安全模式下的消息解密和加密过程
 func (w *API) encryptor() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Query("encrypt_type") == "" {
+		//检测消息是否加密
+		reqEnc := requestEncrypt{}
+		_ = c.ShouldBindQuery(&reqEnc)
+		if reqEnc.EncryptedType == "" {
 			return
 		}
-		msgSignature := c.Query("msg_signature")
-		if msgSignature == "" {
-			log.Printf("encryptor: msg_signature is empty")
-			c.AbortWithStatus(http.StatusBadRequest)
+		if w.config.AesEncodeKey == "" {
+			panic(errors.New("config: AesEncodeKey is empty"))
 		}
-		encXml := &encryptedXMLMsg{}
-		if err := xml.NewDecoder(c.Request.Body).Decode(encXml); err != nil {
-			log.Printf("err: %v", err)
+		//对收到的消息进行解密，和再封装
+		eXmlRecv := &encryptedXmlRecv{}
+		if err := xml.NewDecoder(c.Request.Body).Decode(eXmlRecv); err != nil {
+			log.Printf("%#v", errors.Wrap(err, "decode xml message error"))
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		timestamp := c.Query("timestamp")
-		nonce := c.Query("nonce")
-		sigGen := signature(w.config.AppToken, timestamp, nonce, encXml.EncryptedMsg)
-		if sigGen != msgSignature {
+		//进行消息体的验证
+		sigGen := signature(w.config.AppToken, reqEnc.Timestamp, reqEnc.Nonce, eXmlRecv.EncryptedMsg)
+		if sigGen != reqEnc.MsgSignature {
 			_ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("signature check failed"))
 			return
 		}
-		random, rawXmlBytes, err := decryptMsg(w.config.AppID, encXml.EncryptedMsg, w.config.AesEncodeKey)
+		//解密消息
+		random, rawXmlBytes, err := decryptMsg(w.config.AppID, eXmlRecv.EncryptedMsg, w.config.AesEncodeKey)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		//替换body为解密后的内容
+		//替换body为解密后的内容,实现透明代理
 		c.Request.Body = ioutil.NopCloser(bytes.NewReader(rawXmlBytes))
-		//同时，截取body，将之加密后发送
+		//同时，截取Writer，便于后面加密消息
 		bufWriter := &encryptorWriter{
 			ResponseWriter: c.Writer,
 			body:           bytes.NewBuffer(nil),
@@ -173,15 +174,21 @@ func (w *API) encryptor() gin.HandlerFunc {
 		//control flow
 		c.Next()
 		rawXmlBytes, _ = ioutil.ReadAll(bufWriter.body)
-		encXmlMsg, err := encryptMsg(random, rawXmlBytes, w.config.AppID, w.config.AesEncodeKey)
+		encRawReply, err := encryptMsg(random, rawXmlBytes, w.config.AppID, w.config.AesEncodeKey)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusBadRequest, err)
+			log.Printf("%#v", errors.Wrap(err, "encrypt message"))
+			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
-		_, err = bufWriter.ResponseWriter.Write(encXmlMsg)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, err)
-			return
+		replySignature := signature(w.config.AppToken, reqEnc.Timestamp, reqEnc.Nonce, string(encRawReply))
+		xmlReply := encryptedXmlReply{
+			EncryptMsg:   string(encRawReply),
+			MsgSignature: replySignature,
+			TimeStamp:    reqEnc.Timestamp,
+			Nonce:        reqEnc.Nonce,
 		}
+		//发送加密后的消息
+		c.Writer = bufWriter.ResponseWriter
+		c.XML(http.StatusOK, &xmlReply)
 	}
 }
