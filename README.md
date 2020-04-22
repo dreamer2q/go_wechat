@@ -1,16 +1,37 @@
 # Go Wechat
 
-API Implementation for wechat subscription account in Golang
+提供微信公众号基础能力支持
+
+## 已实现
+
+- [x] 自定义菜单
+- 消息管理
+  - [x] 接收消息
+  - [x] 被动回复
+  - [x] 消息加密
+  - [x] 模板消息 [待改进]
+  - [x] 群发消息
+- [x] 素材管理
+- [x] 留言管理(not tested)
+- [x] 用户管理
+- [x] 账号管理
+
+## TODO
+
+- [ ] 支持 TLS
+
+**PS**需要更多支持，请参考[wechat](https://github.com/silenceper/wechat)
 
 # 快速上手
 
-**API 很可能会有很大的变动**
+## 接入指南
+
+参考[微信开发文档](https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Access_Overview.html)
 
 ## 基本的消息与事件处理
 
 ```go
 package main
-
 import (
 	"fmt"
 	wc "github.com/dreamer2q/go_wechat"
@@ -20,8 +41,6 @@ import (
 )
 
 func main() {
-
-    //初始化
 	wx := wc.New(&wc.Config{
 		AppID:        AppID,
 		AppSecret:    AppSecret,
@@ -29,15 +48,13 @@ func main() {
 		AesEncodeKey: AesEncodeKey,
 		Timeout:      10 * time.Second,
 		Callback:     "/wx",
+		Debug:        true,
 	})
 
-    //设置事件处理函数，空为不处理
-	wx.EventHandle = func(m *wc.MessageReceive) wc.MessageReply {
-		log.Printf("EventHandler: user: %s: %s\n", m.FromUserName, m.Event)
+	wx.SetEventHandler(func(m wc.MessageReceive) wc.MessageReply {
 		switch m.Event {
-        case wc.EvSubscribe:
-            //根据openID获取用户信息
-            userInfo, err := wx.User.GetUserInfo(m.FromUserName)
+		case wc.EvSubscribe:
+			userInfo, err := wx.User.GetUserInfo(m.FromUserName)
 			if err != nil {
 				log.Printf("error: %#v", errors.Wrap(err, "getUserInfo"))
 				return wc.Text{Content: "something went wrong"}
@@ -47,50 +64,48 @@ func main() {
 			log.Printf("unsubscribe event")
 		}
 		//nil means no reply
-        return nil
-    }
+		return nil
+	})
 
-    //设置消息处理函数，空为不处理
-	wx.MessageHandle = func(m *wc.MessageReceive) wc.MessageReply {
+	wx.SetMessageHandler(func(m wc.MessageReceive) wc.MessageReply {
 		switch m.MsgType {
 		case wc.MsgText:
 			return wc.Text{Content: m.Content}
 		default:
 			return wc.Text{Content: "Not support type"}
 		}
-	}
+	})
 
 	log.Panicln(wx.Run(":80"))
 }
-
 ```
+
 ## 菜单处理
 
-> 下面的格式和可能会大改
+### 创建菜单
 
 ```go
-err := wx.Menu.Create(
+    err := wx.Menu.Create(
 		menu.RootMenu{
-			Buttons: []menu.Item{
+			Menus: []menu.Item{
+				&menu.ClickMenu{
+					Name: "点击测试",
+					Key:  "click_test",
+				},
 				&menu.SubMenu{
-					Name: "开始",
-					Items: []menu.Item{
-						&menu.View{
+					Name: "二级菜单",
+					Menus: []menu.Item{
+						&menu.ViewMenu{
 							Name: "博客",
 							Url:  "https://dreamer2q.wang",
 						},
-						&menu.Click{
-							Name: "点击测试",
-							Key:  "click_test",
-						},
-					},
-				},
-				&menu.SubMenu{
-					Name: "关于",
-					Items: []menu.Item{
-						&menu.Click{
+						&menu.ClickMenu{
 							Name: "关于我",
-							Key:  "click_aboutme",
+							Key:  "click_about",
+						},
+						&menu.ClickMenu{
+							Name: "点我没反应",
+							Key:  "noempty",
 						},
 					},
 				},
@@ -98,32 +113,60 @@ err := wx.Menu.Create(
 		})
 	if err != nil {
 		log.Panic(err)
-	}
+    }
 ```
 
-# 菜单事件的消息处理
+### 处理菜单事件
+
+- 方法一，订阅事件
 
 ```go
-wx.EventHandle = func(m *wc.MessageReceive) wc.MessageReply {
+	wx.On("event.CLICK.click_test", func(msg wc.MessageReceive) wc.MessageReply {
+		return wc.Text{Content: "点击菜单测试"}
+	})
+	wx.On("event.CLICK.click_about", func(msg wc.MessageReceive) wc.MessageReply {
+		return wc.Text{Content: "关于我： 我是傻逼开发者"}
+	})
+	wx.On("event.CLICK.noempty", func(msg wc.MessageReceive) wc.MessageReply {
+		return nil //no reply
+	})
+	wx.On("event.VIEW.https://dreamer2q.wang", func(msg wc.MessageReceive) wc.MessageReply {
+		log.Printf("view event") //记录事件
+		return nil
+	})
+
+```
+
+- 方法二，在总事件中处理
+
+```go
+    wx.SetEventHandler(func(m wc.MessageReceive) wc.MessageReply {
 		log.Printf("EventHandler: user %s: %s\n", m.FromUserName, m.Event)
 		switch m.Event {
 		case wc.EvClick:
 			switch m.EventKey {
 			case "click_test":
-				return wc.Text{Content: "点击测试"}
-			case "click_aboutme":
-				return wc.Text{Content: "关于我： 我是 dreamer2q"}
+				return wc.Text{Content: "点击菜单测试"}
+			case "click_about":
+				return wc.Text{Content: "关于我，我是xxxx"}
+			case "noempty":
+				return nil
 			}
 		case wc.EvView:
-			fmt.Printf("Event: view: %#v", m)
+			log.Printf("view event: %s", m.EventKey)
 		}
-		//nil means no reply
 		return nil
-	}
+	})
 ```
 
-## 更多用例
+**订阅事件优先级高，以高优先级处理结果为准。**
 
-```go
-//TODO
-```
+## 素材管理
+
+### 上传素材
+
+### 获取素材列表
+
+## 用户管理
+
+## 账号管理
