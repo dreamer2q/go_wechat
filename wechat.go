@@ -23,6 +23,8 @@ type API struct {
 
 	*Ev
 
+	Handlers []gin.HandlerFunc
+
 	config *Config
 }
 
@@ -37,7 +39,7 @@ func New(c *Config) *API {
 	}
 	r := request.New(rc)
 	ev := newEv()
-	return &API{
+	api := &API{
 		Media:    media.New(r),
 		Template: message.New(r),
 		User:     user.New(r),
@@ -49,24 +51,34 @@ func New(c *Config) *API {
 
 		config: c,
 	}
+
+	api.Handlers = []gin.HandlerFunc{
+		api.logger(),       //logger 需要记录完整的事件，需要处于第一个
+		api.verifier(),     //微信请求认证
+		api.debugger(),     //输出请求和发送的body
+		api.encryptor(),    //消息加密的透明代理
+		api.requestHandler, //消息处理
+	}
+
+	return api
 }
 
+//attach route to a gin
+func (w *API) AttachToGin(r *gin.Engine) {
+	r.GET(w.config.Callback, w.Handlers...)  //fired when setting callback addr
+	r.POST(w.config.Callback, w.Handlers...) //fired when message/event comes in
+}
+
+//default instance
 func (w *API) Run(addr ...string) error {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	r.Any(w.config.Callback,
-		w.logger(),       //logger 需要记录完整的事件，需要处于第一个
-		w.verifier(),     //微信请求认证
-		w.debugger(),     //输出请求和发送的body
-		w.encryptor(),    //消息加密的透明代理
-		w.requestHandler, //消息处理
-	)
-
-	//r.Any(w.config.Callback, w.requestHandler)
+	w.AttachToGin(r)
 	return r.Run(addr...)
 }
 
+//main handle
 func (w *API) requestHandler(c *gin.Context) {
 	raw := &MessageReceive{}
 	if err := c.ShouldBindXML(raw); err != nil {
